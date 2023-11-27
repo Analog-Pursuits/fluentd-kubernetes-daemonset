@@ -1,5 +1,5 @@
 name: Create and push
-on: workflow_dispatch
+on: push
 
 jobs:
   build-and-push-s3:
