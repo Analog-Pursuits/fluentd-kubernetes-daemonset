@@ -11,7 +11,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: ./docker-image/v1.16/debian-s3
-          file: ./Dockerfile
+          context: "{{defaultContext}}:docker-image/v1.16/debian-s3"
+          file: Dockerfile
           push: true
           tags: registry.techdebt.cloud/debian-fluentd-s3:${{github.sha}}
