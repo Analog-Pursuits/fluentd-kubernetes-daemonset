@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+  namespace: kube-system
+  labels:
+    k8s-app: fluentd-logging
+    version: v1
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluentd-logging
+      version: v1
+  template:
+    metadata:
+      labels:
+        k8s-app: fluentd-logging
+        version: v1
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: fluentd
+        image: registry.techdebt.cloud/debian-fluentd-s3:431e3955de9e5c976de5749b3f8f4b861fb8b86b
+        env:
+          - name: K8S_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name:  S3_BUCKET_NAME
+            value: "logging"
+          - name:  S3_BUCKET_REGION
+            value: "us-west-1"
+          # Custom S3 endpoint location
+          - name: S3_ENDPOINT
+            value: "https://s3.local"
+          - name: AWS_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: access-key
+          - name: AWS_SECRET_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: minio-secret
+                key: secret-key
+
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        # When actual pod logs in /var/lib/docker/containers, the following lines should be used.
+        # - name: dockercontainerlogdirectory
+        #   mountPath: /var/lib/docker/containers
+        #   readOnly: true
+        # When actual pod logs in /var/log/pods, the following lines should be used.
+        - name: dockercontainerlogdirectory
+          mountPath: /var/log/pods
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      # When actual pod logs in /var/lib/docker/containers, the following lines should be used.
+      # - name: dockercontainerlogdirectory
+      #   hostPath:
+      #     path: /var/lib/docker/containers
+      # When actual pod logs in /var/log/pods, the following lines should be used.
+      - name: dockercontainerlogdirectory
+        hostPath:
+          path: /var/log/pods
